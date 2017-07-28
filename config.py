@@ -8,17 +8,16 @@ __copyright__ = '2011, Grant Drake <grant.drake@gmail.com>'
 __docformat__ = 'restructuredtext en'
 
 import copy
-from functools import partial
 try:
     from PyQt5 import Qt as QtGui
     from PyQt5.Qt import (QTableWidgetItem, QVBoxLayout, Qt, QGroupBox, QTableWidget,
                           QCheckBox, QAbstractItemView, QHBoxLayout, QIcon,
-                          QInputDialog)
+                          QInputDialog, QTextEdit, QLineEdit)
 except ImportError:
     from PyQt4 import QtGui
     from PyQt4.Qt import (QTableWidgetItem, QVBoxLayout, Qt, QGroupBox, QTableWidget,
                           QCheckBox, QAbstractItemView, QHBoxLayout, QIcon,
-                          QInputDialog)
+                          QInputDialog, QTextEdit, QLineEdit)
 from calibre.gui2 import get_current_db, question_dialog, error_dialog
 from calibre.gui2.complete2 import EditWithComplete
 from calibre.gui2.metadata.config import ConfigWidget as DefaultConfigWidget
@@ -30,6 +29,7 @@ STORE_NAME = 'Options'
 KEY_GET_ALL_AUTHORS = 'getAllAuthors'
 KEY_GET_EDITIONS = 'getEditions'
 KEY_GENRE_MAPPINGS = 'genreMappings'
+KEY_IDENTIFIER_ORDER = 'getIdentifierOrder'
 
 DEFAULT_GENRE_MAPPINGS = {
                 'Anthologies': ['Anthologies'],
@@ -59,7 +59,6 @@ DEFAULT_GENRE_MAPPINGS = {
                 'Horror': ['Horror'],
                 'Comedy': ['Humour'],
                 'Humor': ['Humour'],
-                'Health': ['Health'],
                 'Inspirational': ['Inspirational'],
                 'Sequential Art > Manga': ['Manga'],
                 'Modern': ['Modern'],
@@ -96,12 +95,16 @@ DEFAULT_STORE_VALUES = {
     KEY_GET_ALL_AUTHORS: False,
     KEY_GENRE_MAPPINGS: copy.deepcopy(DEFAULT_GENRE_MAPPINGS)
 }
+DEFAULT_STORE_VALUES_KEY_ORDER = {KEY_IDENTIFIER_ORDER:"['goodreads', 'isbn', 'amazon', 'amazon_fr','amazon_de','amazon_uk','amazon_it','amazon_jp','amazon_es','amazon_br','amazon_nl','amazon_cn','amazon_ca', 'mobi-asin']",
+                                  "KEY_NOT_USED": "Not Used"}
 
 # This is where all preferences for this plugin will be stored
 plugin_prefs = JSONConfig('plugins/Goodreads')
+plugin_prefs_key_order = JSONConfig('plugins/Goodreads_key_order')
 
 # Set defaults
 plugin_prefs.defaults[STORE_NAME] = DEFAULT_STORE_VALUES
+plugin_prefs_key_order.defaults[STORE_NAME] = DEFAULT_STORE_VALUES_KEY_ORDER
 
 
 class GenreTagMappingsTableWidget(QTableWidget):
@@ -253,6 +256,16 @@ class ConfigWidget(DefaultConfigWidget):
         other_group_box_layout.addWidget(self.all_authors_checkbox)
 
         self.edit_table.populate_table(c[KEY_GENRE_MAPPINGS])
+		#key_order_stuff
+        d = plugin_prefs_key_order[STORE_NAME]
+        self.identifier_order = QLineEdit('Identifiers used in "search by identifier":',self)
+        self.identifier_order.setToolTip('The order influences greatly the result.  For example, [''amazon'', ''goodreads'', ''isbn'']\n'
+                                         'will return Kindle Edition results before any other (provided your books have an'
+                                         'amazon book id that is of that type.  If that is not successful, the search then'
+                                         'tries with the goodreads_id that is already associated with this book, if any.  '
+                                         'Failing that, the isbn will be used to find a corresponding goodreads_id.')
+        self.identifier_order.setText(d[KEY_IDENTIFIER_ORDER])
+        other_group_box_layout.addWidget(self.identifier_order)
 
     def commit(self):
         DefaultConfigWidget.commit(self)
@@ -260,7 +273,10 @@ class ConfigWidget(DefaultConfigWidget):
         new_prefs[KEY_GET_EDITIONS] = self.get_editions_checkbox.checkState() == Qt.Checked
         new_prefs[KEY_GET_ALL_AUTHORS] = self.all_authors_checkbox.checkState() == Qt.Checked
         new_prefs[KEY_GENRE_MAPPINGS] = self.edit_table.get_data()
+        new_prefs[KEY_IDENTIFIER_ORDER] = self.identifier_order.text()
         plugin_prefs[STORE_NAME] = new_prefs
+        new_prefs_key_order ={KEY_IDENTIFIER_ORDER: self.identifier_order.text()}
+        plugin_prefs_key_order[STORE_NAME]=new_prefs_key_order
 
     def add_mapping(self):
         new_genre_name, ok = QInputDialog.getText(self, 'Add new mapping',

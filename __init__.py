@@ -18,13 +18,14 @@ from calibre.ebooks.metadata import check_isbn
 from calibre.ebooks.metadata.sources.base import Source, fixcase, fixauthors
 from calibre.utils.icu import lower
 from calibre.utils.cleantext import clean_ascii_chars
+from calibre_plugins.goodreads.goodreads_api import get_goodreads_id_from_autocomplete
 
 class Goodreads(Source):
 
     name = 'Goodreads'
     description = _('Downloads metadata and covers from Goodreads')
     author = 'Grant Drake with updates by David Forrester'
-    version = (1, 1, 12)
+    version = (1, 1, 14)
     minimum_calibre_version = (0, 8, 0)
 
     capabilities = frozenset(['identify', 'cover'])
@@ -50,13 +51,10 @@ class Goodreads(Source):
             return ('goodreads', goodreads_id,
                     '%s/book/show/%s' % (Goodreads.BASE_URL, goodreads_id))
 
-    def create_query(self, log, title=None, authors=None, identifiers={}):
+    def create_query(self, log, title=None, authors=None):
 
-        isbn = check_isbn(identifiers.get('isbn', None))
         q = ''
-        if isbn is not None:
-            q = 'search_type=books&search[query]=' + isbn
-        elif title or authors:
+        if title or authors:
             tokens = []
             title_tokens = list(self.get_title_tokens(title,
                                 strip_joiners=False, strip_subtitle=True))
@@ -104,44 +102,34 @@ class Goodreads(Source):
         match is found with identifiers.
         '''
         matches = []
+        if not identifiers: identifiers={}
         # Unlike the other metadata sources, if we have a goodreads id then we
         # do not need to fire a "search" at Goodreads.com. Instead we will be
         # able to go straight to the URL for that book.
-        goodreads_id = identifiers.get('goodreads', None)
-        isbn = check_isbn(identifiers.get('isbn', None))
+        # By using the autocomplete api, the previous comment is true for any book
+        # having an identifier that is either goodreads_id, isbn or amazon
+        log.level = 4
+        goodreads_id = get_goodreads_id_from_autocomplete(identifiers, timeout, log)
         br = self.browser
         if goodreads_id:
             matches.append('%s/book/show/%s-aaaa' % (Goodreads.BASE_URL, goodreads_id))
-        else:
-            query = self.create_query(log, title=title, authors=authors,
-                    identifiers=identifiers)
+
+        if not matches:
+            query = self.create_query(log, title=title, authors=authors)
             if query is None:
                 log.error('Insufficient metadata to construct query')
                 return
             try:
                 log.info('Querying: %s' % query)
                 response = br.open_novisit(query, timeout=timeout)
-                if isbn:
-                    # Check whether we got redirected to a book page for ISBN searches.
-                    # If we did, will use the url.
-                    # If we didn't then treat it as no matches on Goodreads
-                    location = response.geturl()
-                    if '/book/show/' in location:
-                        log.info('ISBN match location: %r' % location)
-                        matches.append(location)
-            except Exception as e:
-                err = 'Failed to make identify query: %r' % query
-                log.exception(err)
-                return as_unicode(e)
-
-            # For ISBN based searches we have already done everything we need to
-            # So anything from this point below is for title/author based searches.
-            if not isbn:
-                log.info('no isbn')
                 try:
                     raw = response.read().strip()
                     #open('E:\\t.html', 'wb').write(raw)
                     raw = raw.decode('utf-8', errors='replace')
+                    location = response.geturl()
+                    if '/book/show/' in location:
+                        log.info('ISBN match location: %r' % location)
+                        matches.append(location)
                     if not raw:
                         log.error('Failed to get raw result for query: %r' % query)
                         return
@@ -151,20 +139,17 @@ class Goodreads(Source):
                     msg = 'Failed to parse goodreads page for query: %r' % query
                     log.exception(msg)
                     return msg
-                # Now grab the first value from the search results, provided the
-                # title and authors appear to be for the same book
                 self._parse_search_results(log, title, authors, root, matches, timeout)
+            except Exception as e:
+                err = 'Failed to make identify query: %r' % query
+                log.exception(err)
+                return as_unicode(e)
 
         if abort.is_set():
             return
 
         if not matches:
-            if identifiers and title and authors:
-                log.info('No matches found with identifiers, retrying using only'
-                        ' title and authors')
-                return self.identify(log, result_queue, abort, title=title,
-                        authors=authors, timeout=timeout)
-            log.error('No matches found with query: %r' % query)
+            log.error(u'No matches found.')
             return
 
         from calibre_plugins.goodreads.worker import Worker
@@ -296,8 +281,7 @@ class Goodreads(Source):
             log.info('Choosing the first audio edition as no others found.')
             matches.append(first_non_valid)
 
-    def download_cover(self, log, result_queue, abort,
-            title=None, authors=None, identifiers={}, timeout=30):
+    def download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30, get_best_cover=False):
         cached_url = self.get_cached_cover_url(identifiers)
         if cached_url is None:
             log.info('No cached cover found, running identify')
