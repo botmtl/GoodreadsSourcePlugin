@@ -17,7 +17,9 @@ try:
                           QRegExpValidator, QRegExp, QTextEdit,
                           QListWidget, QAbstractItemView)
 except ImportError as e:
+    # noinspection PyUnresolvedReferences
     from PyQt4 import QtGui
+    # noinspection PyUnresolvedReferences
     from PyQt4.Qt import (Qt, QIcon, QPixmap, QLabel, QDialog, QHBoxLayout,
                           QTableWidgetItem, QFont, QLineEdit, QComboBox,
                           QVBoxLayout, QDialogButtonBox, QStyledItemDelegate, QDateTime,
@@ -58,11 +60,11 @@ plugin_icon_resources = {}
 
 
 def set_plugin_icon_resources(name, resources):
-    '''
+    """
     Set our global store of plugin name and icon resources for sharing between
     the InterfaceAction class which reads them and the ConfigWidget
     if needed for use on the customization dialog for this plugin.
-    '''
+    """
     global plugin_icon_resources, plugin_name
     plugin_name = name
     plugin_icon_resources = resources
@@ -203,7 +205,7 @@ def create_menu_action_unique(ia, parent_menu, menu_text, image=None, tooltip=No
 
 
 def swap_author_names(author):
-    if author == None:
+    if author is None:
         return author
     if author.find(',') == -1:
         return author
@@ -618,7 +620,7 @@ def get_title_authors_text(db, book_id):
             return [a.strip().replace('|',',') for a in authors.split(',')]
         return []
 
-    title = db.title(book_id, index_is_id=True)
+    title = db.title
     authors = authors_to_list(db, book_id)
     from calibre.ebooks.metadata import authors_to_string
     return '%s / %s'%(title, authors_to_string(authors))

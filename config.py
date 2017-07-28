@@ -14,7 +14,9 @@ try:
                           QCheckBox, QAbstractItemView, QHBoxLayout, QIcon,
                           QInputDialog, QTextEdit, QLineEdit)
 except ImportError:
+    # noinspection PyUnresolvedReferences
     from PyQt4 import QtGui
+    # noinspection PyUnresolvedReferences
     from PyQt4.Qt import (QTableWidgetItem, QVBoxLayout, Qt, QGroupBox, QTableWidget,
                           QCheckBox, QAbstractItemView, QHBoxLayout, QIcon,
                           QInputDialog, QTextEdit, QLineEdit)
@@ -96,7 +98,7 @@ DEFAULT_STORE_VALUES = {
     KEY_GENRE_MAPPINGS: copy.deepcopy(DEFAULT_GENRE_MAPPINGS)
 }
 DEFAULT_STORE_VALUES_KEY_ORDER = {KEY_IDENTIFIER_ORDER:"['goodreads', 'isbn', 'amazon', 'amazon_fr','amazon_de','amazon_uk','amazon_it','amazon_jp','amazon_es','amazon_br','amazon_nl','amazon_cn','amazon_ca', 'mobi-asin']",
-                                  "KEY_NOT_USED": "Not Used"}
+                                  "KEY_DISABLE_TITLE_SEARCH": False}
 
 # This is where all preferences for this plugin will be stored
 plugin_prefs = JSONConfig('plugins/Goodreads')
@@ -256,7 +258,7 @@ class ConfigWidget(DefaultConfigWidget):
         other_group_box_layout.addWidget(self.all_authors_checkbox)
 
         self.edit_table.populate_table(c[KEY_GENRE_MAPPINGS])
-		#key_order_stuff
+        #key_order_stuff
         d = plugin_prefs_key_order[STORE_NAME]
         self.identifier_order = QLineEdit('Identifiers used in "search by identifier":',self)
         self.identifier_order.setToolTip('The order influences greatly the result.  For example, [''amazon'', ''goodreads'', ''isbn'']\n'
@@ -266,6 +268,10 @@ class ConfigWidget(DefaultConfigWidget):
                                          'Failing that, the isbn will be used to find a corresponding goodreads_id.')
         self.identifier_order.setText(d[KEY_IDENTIFIER_ORDER])
         other_group_box_layout.addWidget(self.identifier_order)
+        self.disable_title_search_checkbox = QCheckBox('Disable title/author search', self)
+        self.disable_title_search_checkbox.setChecked(d.get("KEY_DISABLE_TITLE_SEARCH") or False)
+        other_group_box_layout.addWidget(self.disable_title_search_checkbox)
+
 
     def commit(self):
         DefaultConfigWidget.commit(self)
@@ -275,7 +281,10 @@ class ConfigWidget(DefaultConfigWidget):
         new_prefs[KEY_GENRE_MAPPINGS] = self.edit_table.get_data()
         new_prefs[KEY_IDENTIFIER_ORDER] = self.identifier_order.text()
         plugin_prefs[STORE_NAME] = new_prefs
-        new_prefs_key_order ={KEY_IDENTIFIER_ORDER: self.identifier_order.text()}
+        new_prefs_key_order = {
+                                KEY_IDENTIFIER_ORDER: self.identifier_order.text(),
+                                "KEY_DISABLE_TITLE_SEARCH": self.disable_title_search_checkbox.checkState() == Qt.Checked
+                              }
         plugin_prefs_key_order[STORE_NAME]=new_prefs_key_order
 
     def add_mapping(self):

@@ -1,0 +1,23 @@
+[
+  {
+    "imageUrl": "https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1497042735i/35373507._SX50_.jpg",
+    "bookId": "35373507",
+    "workId": "56582686",
+    "bookUrl": "/book/show/35373507-federal-affair",
+    "title": "Federal Affair",
+    "numPages": null,
+    "avgRating": "3.55",
+    "author": {
+      "id": 13855882,
+      "name": "Aiden Bates",
+      "isGoodreadsAuthor": true,
+      "profileUrl": "https://www.goodreads.com/author/show/13855882.Aiden_Bates"
+    },
+    "kcrPreviewUrl": null,
+    "description": {
+      "html": "One FBI Agent. One rugged cop. And the passion that defines them. He's not a typical FBI agent, nor is he a typical omega, but Alex Marley is good at what he does. Called in\u2026",
+      "truncated": true,
+      "fullContentUrl": "https://www.goodreads.com/book/show/35373507-federal-affair"
+    }
+  }
+]

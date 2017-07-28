@@ -3,6 +3,8 @@
 from __future__ import (unicode_literals, division, absolute_import,
                         print_function)
 
+
+
 __license__ = 'GPL v3'
 __copyright__ = '2011, Grant Drake <grant.drake@gmail.com>, 2016 updates by David Forrester <davidfor@internode.on.net>'
 __docformat__ = 'restructuredtext en'
@@ -19,13 +21,15 @@ from calibre.ebooks.metadata.sources.base import Source, fixcase, fixauthors
 from calibre.utils.icu import lower
 from calibre.utils.cleantext import clean_ascii_chars
 from calibre_plugins.goodreads.goodreads_api import get_goodreads_id_from_autocomplete
+from calibre_plugins.goodreads import config as cfg
+from calibre_plugins.goodreads.isbn import toI13
 
 class Goodreads(Source):
 
     name = 'Goodreads'
     description = _('Downloads metadata and covers from Goodreads')
     author = 'Grant Drake with updates by David Forrester'
-    version = (1, 1, 14)
+    version = (1, 1, 17)
     minimum_calibre_version = (0, 8, 0)
 
     capabilities = frozenset(['identify', 'cover'])
@@ -46,6 +50,11 @@ class Goodreads(Source):
         return ConfigWidget(self)
 
     def get_book_url(self, identifiers):
+        """
+
+        :param identifiers: list(str): identifiers
+        :return: str: goodreads url for this book
+        """
         goodreads_id = identifiers.get('goodreads', None)
         if goodreads_id:
             return ('goodreads', goodreads_id,
@@ -85,22 +94,37 @@ class Goodreads(Source):
         return url
 
     def clean_downloaded_metadata(self, mi):
-        '''
+        """
         Overridden from the calibre default so that we can stop this plugin messing
         with the tag casing coming from Goodreads
-        '''
+        """
         docase = mi.language == 'eng' or mi.is_null('language')
+
         if docase and mi.title:
             mi.title = fixcase(mi.title)
+
         mi.authors = fixauthors(mi.authors)
-        mi.isbn = check_isbn(mi.isbn)
+        try:
+            from calibre.utils.config import JSONConfig
+            plugin_prefs = JSONConfig('plugins/Quality Check')
+            from calibre_plugins.quality_check.config import STORE_OPTIONS,KEY_AUTHOR_INITIALS_MODE,AUTHOR_INITIALS_MODES
+            initials_mode = plugin_prefs[STORE_OPTIONS].get(KEY_AUTHOR_INITIALS_MODE, AUTHOR_INITIALS_MODES[0])
+            from quality_check.helpers import get_formatted_author_initials
+            mi.authors = [get_formatted_author_initials(initials_mode,author) for author in mi.authors]
+        except:
+            pass
+
+        try:
+            mi.isbn = check_isbn(toI13(mi.isbn))
+        except:
+            pass
 
     def identify(self, log, result_queue, abort, title=None, authors=None,
             identifiers={}, timeout=30):
-        '''
+        """
         Note this method will retry without identifiers automatically if no
         match is found with identifiers.
-        '''
+        """
         matches = []
         if not identifiers: identifiers={}
         # Unlike the other metadata sources, if we have a goodreads id then we
@@ -114,7 +138,8 @@ class Goodreads(Source):
         if goodreads_id:
             matches.append('%s/book/show/%s-aaaa' % (Goodreads.BASE_URL, goodreads_id))
 
-        if not matches:
+        disable_title_search = cfg.plugin_prefs_key_order['Options']['KEY_DISABLE_TITLE_SEARCH']
+        if not matches and not disable_title_search:
             query = self.create_query(log, title=title, authors=authors)
             if query is None:
                 log.error('Insufficient metadata to construct query')
@@ -205,7 +230,7 @@ class Goodreads(Source):
 
         first_result_url_node = root.xpath('//table[@class="tableList"]/tr/td[1]/a[1]/@href')
         if first_result_url_node:
-            import calibre_plugins.goodreads.config as cfg
+
             c = cfg.plugin_prefs[cfg.STORE_NAME]
             if c[cfg.KEY_GET_EDITIONS]:
                 # We need to read the editions for this book and get the matches from those
@@ -282,6 +307,18 @@ class Goodreads(Source):
             matches.append(first_non_valid)
 
     def download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30, get_best_cover=False):
+        """
+
+        :param log: ThreadSafeLog: log
+        :param result_queue: Queue: result queue
+        :param abort: Event: abort
+        :param title: str: Title to search for
+        :param authors: list(str): authors
+        :param identifiers: list(str): list identifiers
+        :param timeout: int: timeout
+        :param get_best_cover: bool: get best cover
+        :return:
+        """
         cached_url = self.get_cached_cover_url(identifiers)
         if cached_url is None:
             log.info('No cached cover found, running identify')

@@ -1,0 +1,90 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "definitions": {},
+    "id": "http://example.com/example.json",
+    "items": {
+        "id": "/items",
+        "properties": {
+            "author": {
+                "id": "/items/properties/author",
+                "properties": {
+                    "id": {
+                        "id": "/items/properties/author/properties/id",
+                        "type": "integer"
+                    },
+                    "isGoodreadsAuthor": {
+                        "id": "/items/properties/author/properties/isGoodreadsAuthor",
+                        "type": "boolean"
+                    },
+                    "name": {
+                        "id": "/items/properties/author/properties/name",
+                        "type": "string"
+                    },
+                    "profileUrl": {
+                        "id": "/items/properties/author/properties/profileUrl",
+                        "title": "Author",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "avgRating": {
+                "id": "/items/properties/avgRating",
+                "type": "string"
+            },
+            "bookId": {
+                "id": "/items/properties/bookId",
+                "title": "goodreads_id",
+                "type": "string"
+            },
+            "bookUrl": {
+                "id": "/items/properties/bookUrl",
+                "type": "string"
+            },
+            "description": {
+                "id": "/items/properties/description",
+                "properties": {
+                    "fullContentUrl": {
+                        "id": "/items/properties/description/properties/fullContentUrl",
+                        "type": "string"
+                    },
+                    "html": {
+                        "id": "/items/properties/description/properties/html",
+                        "type": "string"
+                    },
+                    "truncated": {
+                        "id": "/items/properties/description/properties/truncated",
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "imageUrl": {
+                "id": "/items/properties/imageUrl",
+                "type": "string"
+            },
+            "kcrPreviewUrl": {
+                "id": "/items/properties/kcrPreviewUrl",
+                "type": "null"
+            },
+            "numPages": {
+                "id": "/items/properties/numPages",
+                "type": "null"
+            },
+            "title": {
+                "id": "/items/properties/title",
+                "type": "string"
+            },
+            "workId": {
+                "id": "/items/properties/workId",
+                "type": "string"
+            }
+        },
+        "required": [
+            "bookId",
+            "author"
+        ],
+        "type": "object"
+    },
+    "type": "array"
+}
